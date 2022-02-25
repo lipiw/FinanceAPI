@@ -21,6 +21,18 @@ function verifyIfExistsAccountCPF(req, res, next){
     return next();
 }
 
+function getBalance(statement){
+    const balance = statement.reduce((acc, statement) =>{       // acc (Acumulador), operation (Objeto que esta dentro do statement)
+        if(statement.type === "credit"){ 
+            return acc + statement.amount;
+        }else{
+            return acc - statement.amount;
+        }
+    }, 0);                                      //Iniciando a variavel acc
+    
+    return balance;
+}
+
 app.post('/account', (req, res) =>{
     const {cpf, name} = req.body;
 
@@ -60,5 +72,38 @@ app.post('/deposit', verifyIfExistsAccountCPF, (req, res) =>{
     customer.statement.push(statementOperation);
     return res.send(201).send();
 });
+
+app.post('/withdraw', verifyIfExistsAccountCPF, (req, res) =>{
+    const {customer} = req;
+    const {amount} = req.body;
+
+    const balance = getBalance(customer.statement);
+
+    if(balance < amount){
+        return res.status(400).json({error: 'Insufficient funds!'})
+    }
+
+    const statementOperation = {
+        amount,
+        date_at: new Date(),
+        type:'debit'
+    };
+
+    customer.statement.push(statementOperation);
+
+    return res.status(201).send();
+})
+
+app.get('/statement/date', verifyIfExistsAccountCPF, (req, res) =>{
+    const {customer} = req;
+    const {date} = req.query;
+
+    const dateFormat = new Date(date + " 00:00");        //Para pegar a data independente do horario
+
+    const statement = customer.statement.filter((statement) =>
+        statement.create_at.toDateString() === new Date(dateFormat).toDateString());    //toDateString() para pegar a data no formato que queremos. (2020-02-07)
+
+    return res.json(statement);
+})
 
 app.listen(3333);
