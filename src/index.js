@@ -1,4 +1,5 @@
 const express = require('express');
+const { json } = require('express/lib/response');
 const {v4: uuid} = require('uuid');
 
 const app = express();
@@ -92,7 +93,7 @@ app.post('/withdraw', verifyIfExistsAccountCPF, (req, res) =>{
     customer.statement.push(statementOperation);
 
     return res.status(201).send();
-})
+});
 
 app.get('/statement/date', verifyIfExistsAccountCPF, (req, res) =>{
     const {customer} = req;
@@ -101,9 +102,40 @@ app.get('/statement/date', verifyIfExistsAccountCPF, (req, res) =>{
     const dateFormat = new Date(date + " 00:00");        //Para pegar a data independente do horario
 
     const statement = customer.statement.filter((statement) =>
-        statement.create_at.toDateString() === new Date(dateFormat).toDateString());    //toDateString() para pegar a data no formato que queremos. (2020-02-07)
+        statement.date_at.toDateString() === new Date(dateFormat).toDateString());    //toDateString() para pegar a data no formato que queremos. (2020-02-07)
 
     return res.json(statement);
+});
+
+app.put("/account", verifyIfExistsAccountCPF, (req, res) =>{
+    const { customer } = req;
+    const { name } =  req.body;
+
+    customer.name = name;
+
+    return res.status(200).send();
+});
+
+app.get("/account", verifyIfExistsAccountCPF, (req, res) =>{
+    const { customer } = req;
+
+    return res.json(customer);
+});
+
+app.delete("/account", verifyIfExistsAccountCPF,(req,res)=>{
+    const { customer } = req;
+
+    customers.splice(customer,1);
+
+    return res.status(200).json(customers);
+});
+
+app.get("/balance", verifyIfExistsAccountCPF, (req, res) =>{
+    const { customer } = req;
+
+    const balance = getBalance(customer.statement);
+
+    return res.json(balance);
 })
 
 app.listen(3333);
